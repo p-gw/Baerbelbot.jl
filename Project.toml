@@ -1,0 +1,11 @@
+name = "Baerbelbot"
+uuid = "0e90bb83-780d-4efd-9677-679b145dde49"
+authors = ["Philipp Gewessler <p.gewessler@gmx.at>"]
+version = "0.1.0"
+
+[deps]
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Discord = "fcbf000d-02fd-53f1-af91-d952191673d3"
+DotEnv = "4dc1fcf4-5e3b-5448-94ab-0c38ec0385c1"
+LibPQ = "194296ae-ab2e-5f79-8cd4-7183a0a5a0d1"
