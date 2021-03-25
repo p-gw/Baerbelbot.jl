@@ -139,7 +139,7 @@ function beer_handler(c::Client, e::MessageCreate)
     if amount > 0
       create(c, Reaction, e.message, '👍')
       reply(c, e.message,  "Prost $(user)! Habe $amount Bier$(amount > 1 ? "e" : "") hinzugefügt.")
-      pushData(db, uid(string(user.id)), amount)
+      push!(db, uid(string(user.id)), amount)
     end
   end
 end
