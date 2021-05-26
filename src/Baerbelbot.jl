@@ -1,5 +1,3 @@
-module Baerbelbot
-
 using Discord, Dates, DataFrames, LibPQ, DotEnv
 
 DotEnv.config()
@@ -139,7 +137,7 @@ function beer_handler(c::Client, e::MessageCreate)
     if amount > 0
       create(c, Reaction, e.message, '👍')
       reply(c, e.message,  "Prost $(user)! Habe $amount Bier$(amount > 1 ? "e" : "") hinzugefügt.")
-      pushData(db, uid(string(user.id)), amount)
+      push!(db, uid(string(user.id)), amount)
     end
   end
 end
@@ -156,6 +154,13 @@ add_command!(c, Symbol("bärbel menü")) do c, msg
   reply(c, msg, response)
 end
 
+add_command!(c, Symbol("bärbel 💉")) do c, msg
+  vaccination_date = Dates.Date(2021, 7, 12)
+  days_til_vaccination = vaccination_date - today()
+  response = "Nur noch $(days_til_vaccination.value) Tage bis zur Impfung!"
+  reply(c, msg, response)
+end
+
 const server_start = Dates.now()
 
 add_command!(c, Symbol("bärbel uptime")) do c, msg
@@ -165,5 +170,3 @@ end
 
 open(c)
 wait(c)
-
-end # module
