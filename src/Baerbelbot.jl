@@ -168,5 +168,12 @@ add_command!(c, Symbol("bärbel uptime")) do c, msg
   reply(c, msg, uptime)
 end
 
+add_command!(c, Symbol("bärbel miss"), parsers = [Float64, Float64], fallback_parsers = (c, msg) -> reply(c, msg, "Bitte gib dein Gewicht (kg) und das Messergebnis (mm) als Zahl an!"), help = "test") do c, msg, weight, measurement
+  percentage = 100 * (weight - (10.26 + 0.7927 * weight - 0.3676 * measurement)) / weight
+  emoji = percentage < 8 ? ":ruppeobenohne:" : percentage < 20 ? ":hirschisexy:" : percentage < 25 ? ":ohmygod:" : ":assidead:"
+  response = "Spieglein, Spieglein an der Wand, wer ist der Dickste im ganzen Land?\nBei einem Körpergewicht von $(weight)kg hast du einen Körperfettanteil von $(round(percentage, digits = 1))%! $(emoji)"
+  reply(c, msg, response)
+end
+
 open(c)
 wait(c)
