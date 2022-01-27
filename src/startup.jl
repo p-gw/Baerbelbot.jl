@@ -15,6 +15,10 @@ function init()
   @info "Saving data..."
   save!(chain)
   save!(predictions, "predictions.csv")
+
+  @info "Plotting predictions..."
+  p = plot_forecast(predictions, chain)
+  p |> PNG("data/precompile_plot.png", 15cm, 10cm, dpi = 250)
   return nothing
 end
 

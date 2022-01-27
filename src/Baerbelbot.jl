@@ -137,7 +137,8 @@ add_command!(c, Symbol("bärbel prophezeie"), parsers = [Splat(String)]) do c, m
 
   data = pull(db)
   identical_data = checksum(data) == checksum("data/data.csv")
-  if identical_data
+  time_difference = (datetime2unix(now()) - mtime("data/data.csv")) / 60  # time difference in minutes
+  if identical_data || time_difference < 60
     predictions = CSV.read("data/predictions.csv", DataFrame)
     predictions.uid = string.(predictions.uid)
     chain = h5open("data/mcmc-chains.h5", "r") do f
