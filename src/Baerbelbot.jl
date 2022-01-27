@@ -1,41 +1,13 @@
-using Discord, Dates, DataFrames, LibPQ, DotEnv
+using Discord, Dates, DataFrames, LibPQ, DotEnv, Cairo, Fontconfig
 
 DotEnv.config()
 
-function push!(connection, uid, amount::Int, ts = Dates.now())
-  execute(connection, "INSERT INTO data (timestamp, uid, amount) VALUES('$(ts)', '$(uid)', '$(amount)')")
-end
-
-function pull(connection)
-  result = execute(connection, "SELECT * FROM data")
-  return DataFrame(result)
-end
+include("./startup.jl")
 
 const token = string(ENV["BOT_TOKEN"])
 const c = Client(token)
-const db = LibPQ.Connection("""
-  host=$(ENV["DATABASE_HOST"])
-  port=$(ENV["DATABASE_PORT"])
-  user=$(ENV["DATABASE_USER"])
-  password=$(ENV["DATABASE_PASSWORD"])
-  dbname=$(ENV["DATABASE_NAME"])
-""")
-
 
 set_prefix!(c, "!")
-
-function translate(t::String)
-  t = replace(t, "days" => "Tage")
-  t = replace(t, "day" => "Tag")
-  t = replace(t, "hours" => "Stunden")
-  t = replace(t, "hour" => "Stunde")
-  t = replace(t, "minutes" => "Minuten")
-  t = replace(t, "minute" => "Minute")
-  t = replace(t, " seconds" => " Sekunden")
-  t = replace(t, " second" => " Sekunde")
-  t = replace(t, "milliseconds" => "Millisekunden")
-  t = replace(t, "millisecond" => "Millisekunde")
-end
 
 add_command!(c, Symbol("bärbel wann")) do c, msg
   reference = Dates.DateTime(2020, 7, 16, 19, 0, 0)
@@ -50,16 +22,6 @@ add_command!(c, Symbol("bärbel wann")) do c, msg
   difference = translate(difference)
   response = "Und da steigt die Lust auf ein :beer:! Noch $(difference) bis zum nächsten Stammtisch"
   reply(c, msg, response)
-end
-
-function uid(user::String)::String
-  replace(user, r"[^0-9]" => s"")
-end
-
-function average(d::AbstractDataFrame)::Float64
-  total = sum(d.amount)
-  n_days = length(unique(Dates.format.(d.timestamp, "d.m.yyyy")))
-  return total / n_days
 end
 
 add_command!(c, Symbol("bärbel zähl"), parsers = [String]) do c, msg, user
@@ -83,10 +45,6 @@ add_command!(c, Symbol("bärbel zähl"), parsers = [String]) do c, msg, user
   end
 end
 
-function count(s::String)::Int
-  length(split(s, r"🍺")) - 1
-end
-
 add_command!(c, Symbol("bärbel plus"), parsers = [String, Splat(String, ",")]) do c, msg, beers, users...
   users = collect(users)
   amount = count(beers)
@@ -105,10 +63,6 @@ add_command!(c, Symbol("bärbel minus"), parsers = [String, Splat(String, ",")])
     push!(db, uid(user), -amount)
     reply(c, msg, "$amount Bier$(amount > 1 ? "e" : "") für $(user) entfernt.")
   end
-end
-
-function enquote(s::String)
-  return "<@" * s * ">"
 end
 
 add_command!(c, Symbol("bärbel rangliste")) do c, msg
@@ -173,6 +127,45 @@ add_command!(c, Symbol("bärbel miss"), parsers = [Float64, Float64], fallback_p
   emoji = percentage < 8 ? ":ruppeobenohne:" : percentage < 20 ? ":hirschisexy:" : percentage < 25 ? ":ohmygod:" : ":assidead:"
   response = "Spieglein, Spieglein an der Wand, wer ist der Dickste im ganzen Land?\nBei einem Körpergewicht von $(weight)kg hast du einen Körperfettanteil von $(round(percentage, digits = 1))%! $(emoji)"
   reply(c, msg, response)
+end
+
+add_command!(c, Symbol("bärbel prophezeie"), parsers = [Splat(String)]) do c, msg, users...
+  user_ids = uid.(users)
+  @fetch begin
+    user_data = [retrieve(c, User, parse(Int, user)).val for user in user_ids]
+  end
+
+  data = pull(db)
+  identical_data = checksum(data) == checksum("data/data.csv")
+  if identical_data
+    predictions = CSV.read("data/predictions.csv", DataFrame)
+    predictions.uid = string.(predictions.uid)
+    chain = h5open("data/mcmc-chains.h5", "r") do f
+      read(f, Chains)
+    end
+  else
+    reply(c, msg, "Hm, schwer zu sagen... Da muss ich noch einmal nachrechnen.")
+    chain, predictions = forecast(data)
+    save!(chain)
+    save!(pull(db), "data.csv")
+    save!(predictions, "predictions.csv")
+  end
+
+  filter!(x -> x.uid in user_ids, predictions)
+
+  # user ids are replaced by usernames for plotting
+  replacements = []
+  for i in 1:length(user_ids)
+    Base.push!(replacements, user_ids[i] => user_data[i].username)
+  end
+  predictions.username = replace(predictions.uid, replacements...)
+
+  p = plot_forecast(predictions, chain)
+  p |> PNG("data/plot.png", 15cm, 10cm, dpi = 250)
+
+  channel_future = get_channel(c, msg.channel_id)
+  channel = fetch(channel_future).val
+  upload_file(c, channel, "data/plot.png")
 end
 
 open(c)

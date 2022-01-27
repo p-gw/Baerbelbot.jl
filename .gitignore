@@ -1,3 +1,9 @@
 *.swp
 .env
 backups/
+test.jl
+
+data/*.csv
+data/*.h5
+data/*.svg
+data/*.png
