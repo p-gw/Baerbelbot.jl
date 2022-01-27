@@ -1,8 +1,5 @@
 using LibPQ, Turing, Distributions, LazyArrays, CategoricalArrays, ReverseDiff, Memoization, StatsFuns, Random
 
-Turing.setadbackend(:reversediff)
-Turing.setrdcache(true)
-
 function prediction_data(data::DataFrame)
   filter!(x -> x.uid != "offset", data)
   data.date = Date.(data.timestamp)
@@ -74,7 +71,7 @@ function Distributions.rand(rng::AbstractRNG, d::ZILogPoisson)::Int
 end
 
 Distributions.minimum(::ZILogPoisson) = 0
-Distributions.minimum(::ZILogPoisson) = Inf
+Distributions.maximum(::ZILogPoisson) = Inf
 
 @model function ZIPoisReg(y, t, person_ids; n = length(y), n_t = length(unique(t)), n_person = length(unique(person_ids)))
   # predictors for poisson expectation
